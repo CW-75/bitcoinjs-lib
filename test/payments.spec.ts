@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import { PaymentCreator } from '../src/payments';
 import * as u from './payments.utils';
 ['embed', 'p2ms', 'p2pk', 'p2pkh', 'p2sh', 'p2wpkh', 'p2wsh'].forEach(p => {

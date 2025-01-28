@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import { crypto as bcrypto } from '..';
 import * as fixtures from './fixtures/crypto.json';
 

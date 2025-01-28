@@ -1117,8 +1117,7 @@ describe(`Psbt`, () => {
       assert.strictEqual(output.value, internalInput.value);
 
       output.script[0] = 123;
-      output.value = 123;
-
+      output.value = BigInt(123);
       assert.ok(!output.script.equals(internalInput.script));
       assert.notEqual(output.value, internalInput.value);
     });

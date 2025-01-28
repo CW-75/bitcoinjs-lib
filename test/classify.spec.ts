@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import * as classify from '../src/classify';
 import * as bscript from '../src/script';
 

@@ -1,5 +1,4 @@
-import * as assert from 'assert';
-import { beforeEach, describe, it } from 'mocha';
+import { beforeEach, describe, it, assert } from 'vitest';
 import {
   ECPair,
   networks as NETWORKS,

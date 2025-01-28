@@ -1,7 +1,12 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import * as scriptNumber from '../src/script_number';
 import * as fixtures from './fixtures/script_number.json';
+
+interface scripTestFixture {
+  hex: string;
+  number: number;
+}
 
 describe('script-number', () => {
   describe('decode', () => {
@@ -15,7 +20,7 @@ describe('script-number', () => {
   });
 
   describe('encode', () => {
-    fixtures.forEach(f => {
+    (fixtures as scripTestFixture[]).forEach(f => {
       it(f.number + ' returns ' + f.hex, () => {
         const actual = scriptNumber.encode(f.number);
 

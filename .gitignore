@@ -1,7 +1,9 @@
 coverage
+lib
 node_modules
 .nyc_output
 npm-debug.log
 test/*.js
 test/integration/*.js
 !test/ts-node-register.js
+release

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import { signature as bscriptSig } from '../src/script';
 import * as fixtures from './fixtures/signature.json';
 
@@ -37,7 +37,8 @@ describe('Script Signatures', () => {
 
       it('throws ' + f.exception, () => {
         const signature = fromRaw(f.raw);
-
+        console.log(f.hex);
+          
         assert.throws(() => {
           bscriptSig.encode(signature, f.hashType);
         }, new RegExp(f.exception));
@@ -49,7 +50,6 @@ describe('Script Signatures', () => {
     fixtures.valid.forEach(f => {
       it('decodes ' + f.hex, () => {
         const decode = bscriptSig.decode(Buffer.from(f.hex, 'hex'));
-
         assert.deepStrictEqual(toRaw(decode.signature), f.raw);
         assert.strictEqual(decode.hashType, f.hashType);
       });

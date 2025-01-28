@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as bip32 from 'bip32';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import * as bitcoin from '../..';
 import { regtestUtils } from './_regtest';
 const rng = require('randombytes');

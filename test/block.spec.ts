@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { beforeEach, describe, it } from 'mocha';
+import { beforeEach, describe, it } from 'vitest';
 import { Block } from '..';
 
 import * as fixtures from './fixtures/block.json';

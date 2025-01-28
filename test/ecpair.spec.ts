@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { beforeEach, describe, it } from 'mocha';
+import { beforeEach, describe, it } from 'vitest';
 import * as proxyquire from 'proxyquire';
 import { ECPair, ECPairInterface, networks as NETWORKS } from '..';
 import * as fixtures from './fixtures/ecpair.json';

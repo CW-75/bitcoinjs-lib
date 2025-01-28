@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import * as baddress from '../src/address';
 import * as bscript from '../src/script';
 import * as fixtures from './fixtures/address.json';

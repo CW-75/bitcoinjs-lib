@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 import * as bufferutils from '../src/bufferutils';
 import { BufferReader, BufferWriter } from '../src/bufferutils';
 
@@ -10,7 +10,6 @@ describe('bufferutils', () => {
   function concatToBuffer(values: number[][]): Buffer {
     return Buffer.concat(values.map(data => Buffer.from(data)));
   }
-
   describe('readUInt64LE', () => {
     fixtures.valid.forEach(f => {
       it('decodes ' + f.hex, () => {
