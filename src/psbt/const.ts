@@ -1,5 +1,6 @@
-import { PsbtOpts } from "./types";
-import { bitcoin as btcNetwork} from "src/networks";
+import { Bip32Derivation } from "bip174/src/lib/interfaces";
+import { HDSigner, PsbtOpts } from "./types";
+import { bitcoin as btcNetwork} from "../networks";
 
 /**
  * These are the default arguments for a Psbt instance.
@@ -17,3 +18,14 @@ export const DEFAULT_OPTS: PsbtOpts = {
    */
   maximumFeeRate: 5000, // satoshi per byte
 };
+
+
+export const bip32DerivationIsMine = (
+  root: HDSigner,
+): (d: Bip32Derivation) => boolean => {
+  return (d: Bip32Derivation): boolean => {
+    if (!d.masterFingerprint.equals(root.fingerprint)) return false;
+    if (!root.derivePath(d.path).publicKey.equals(d.pubkey)) return false;
+    return true;
+  };
+}

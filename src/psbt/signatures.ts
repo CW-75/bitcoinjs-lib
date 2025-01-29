@@ -1,8 +1,8 @@
 import { PartialSig, PsbtInput } from 'bip174/src/lib/interfaces';
-import { Transaction } from 'src/transaction';
-import * as bscript from 'src/script';
-import { fromPublicKey as ecPairFromPublicKey, Signer, SignerAsync } from 'src/ecpair';
-import * as payments from 'src/payments';
+import { Transaction } from '../transaction';
+import * as bscript from '../script';
+import { fromPublicKey as ecPairFromPublicKey, Signer, SignerAsync } from '../ecpair';
+import * as payments from '../payments';
 import { checkForInput } from 'bip174/src/lib/utils';
 import { HDSigner, HDSignerAsync } from './types';
 

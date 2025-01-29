@@ -6,7 +6,8 @@ import { Psbt as PsbtBase } from 'bip66';
 import { checkFees } from './fees';
 import { isFinalized } from './script';
 import { inputFinalizeGetAmts } from './input';
-import { Transaction } from 'src/transaction';
+import { Transaction } from '../transaction';
+import { checkCache } from './cache';
 
 interface IPsbtCoreUpdates {
   setLocktime(locktime: number): Psbt;
@@ -70,6 +71,22 @@ class Psbt extends PsbtActions implements IPsbtActions, IPsbtCoreUpdates {
     inputFinalizeGetAmts(this.data.inputs, tx, c, true);
     return tx;
   }
+
+  toBuffer(): Buffer {
+    checkCache(this.__CACHE);
+    return this.data.toBuffer();
+  }
+
+  toHex(): string {
+    checkCache(this.__CACHE);
+    return this.data.toHex();
+  }
+
+  toBase64(): string {
+    checkCache(this.__CACHE);
+    return this.data.toBase64();
+  }
+  
 }
 
 export { Psbt };

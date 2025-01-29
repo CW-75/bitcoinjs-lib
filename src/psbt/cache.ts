@@ -1,7 +1,7 @@
 import { PsbtInput } from 'bip174/src/lib/interfaces';
 import { PsbtCache } from './types';
-import { Transaction } from 'src/transaction';
-import { reverseBuffer } from 'src/bufferutils';
+import { Transaction } from '../transaction';
+import { reverseBuffer } from '../bufferutils';
 
 export const addNonWitnessTxCache = (
   cache: PsbtCache,
@@ -45,3 +45,8 @@ export const checkTxInputCache = (
     cache.__TX_IN_CACHE[key] = 1;
   }
   
+export const checkCache = (cache: PsbtCache): void => {
+    if (cache.__UNSAFE_SIGN_NONSEGWIT !== false) {
+      throw new Error('Not BIP174 compliant, can not export');
+    }
+}

@@ -3,8 +3,8 @@ import {
   PsbtInput,
   TransactionFromBuffer,
 } from 'bip174/src/lib/interfaces';
-import { reverseBuffer } from 'src/bufferutils';
-import { Transaction } from 'src/transaction';
+import { reverseBuffer } from '../bufferutils';
+import { Transaction } from '../transaction';
 import { PsbtCache, TxCacheNumberKey } from './types';
 import { checkTxInputCache } from './cache';
 import { isFinalized } from './script';

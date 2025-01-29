@@ -1,8 +1,8 @@
 import { PsbtInput, PsbtOutput } from 'bip174/src/lib/interfaces';
 import { PsbtCache } from './types';
 import { getMeaningfulScript, getScriptFromUtxo } from './script';
-import { hash160 } from 'src/crypto';
-import * as bscript from 'src/script';
+import { hash160 } from '../crypto';
+import * as bscript from '../script';
 
 export const pubkeyInScript = (pubkey: Buffer, script: Buffer): boolean => {
   const pubkeyHash = hash160(pubkey);
@@ -16,24 +16,23 @@ export const pubkeyInScript = (pubkey: Buffer, script: Buffer): boolean => {
   });
 };
 
-
 export const pubkeyInInput = (
-    pubkey: Buffer,
-    input: PsbtInput,
-    inputIndex: number,
-    cache: PsbtCache,
-  ): boolean => {
-    const script = getScriptFromUtxo(inputIndex, input, cache);
-    const { meaningfulScript } = getMeaningfulScript(
-      script,
-      inputIndex,
-      'input',
-      input.redeemScript,
-      input.witnessScript,
-    );
-    return pubkeyInScript(pubkey, meaningfulScript);
-  }
-  
+  pubkey: Buffer,
+  input: PsbtInput,
+  inputIndex: number,
+  cache: PsbtCache,
+): boolean => {
+  const script = getScriptFromUtxo(inputIndex, input, cache);
+  const { meaningfulScript } = getMeaningfulScript(
+    script,
+    inputIndex,
+    'input',
+    input.redeemScript,
+    input.witnessScript,
+  );
+  return pubkeyInScript(pubkey, meaningfulScript);
+};
+
 export const pubkeyInOutput = (
   pubkey: Buffer,
   output: PsbtOutput,
@@ -51,3 +50,6 @@ export const pubkeyInOutput = (
   return pubkeyInScript(pubkey, meaningfulScript);
 };
 
+export const isPubkeyLike = (buf: Buffer): boolean => {
+  return buf.length === 33 && bscript.isCanonicalPubKey(buf);
+};

@@ -1,5 +1,5 @@
 import { PsbtInput } from 'bip174/src/lib/interfaces';
-import { Output, Transaction } from 'src/transaction';
+import { Output, Transaction } from '../transaction';
 import { PsbtCache } from './types';
 import { nonWitnessUtxoTxFromCache } from './transaction';
 import { scriptWitnessToWitnessStack } from './script';

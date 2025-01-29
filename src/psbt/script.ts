@@ -1,6 +1,6 @@
-import { PsbtInput } from 'bip174/src/lib/interfaces';
-import { hasSigs } from './signatures';
-import { payments } from 'src';
+import { PartialSig, PsbtInput } from 'bip174/src/lib/interfaces';
+import { hasSigs, isSigLike } from './signatures';
+import { payments } from '../';
 import {
   checkInvalidP2WSH,
   isP2MS,
@@ -10,10 +10,12 @@ import {
   isP2WPKH,
   isP2WSHScript,
 } from './protocol';
-import { PsbtCache, ScriptType } from './types';
+import { GetScriptReturn, PsbtCache, ScriptType } from './types';
 import { nonWitnessUtxoTxFromCache } from './transaction';
-import { pubkeyInScript } from './pubkey';
+import { isPubkeyLike, pubkeyInScript } from './pubkey';
 import * as varuint from 'bip174/src/lib/converter/varint';
+import * as bscript from '../script';
+import { getPayment } from './payments';
 
 export const canFinalize = (
   input: PsbtInput,
@@ -181,3 +183,165 @@ export const getScriptFromUtxo = (
     throw new Error("Can't find pubkey in input without Utxo data");
   }
 };
+
+export const getScriptFromInput = (
+  inputIndex: number,
+  input: PsbtInput,
+  cache: PsbtCache,
+): GetScriptReturn => {
+  const unsignedTx = cache.__TX;
+  const res: GetScriptReturn = {
+    script: null,
+    isSegwit: false,
+    isP2SH: false,
+    isP2WSH: false,
+  };
+  res.isP2SH = !!input.redeemScript;
+  res.isP2WSH = !!input.witnessScript;
+  if (input.witnessScript) {
+    res.script = input.witnessScript;
+  } else if (input.redeemScript) {
+    res.script = input.redeemScript;
+  } else {
+    if (input.nonWitnessUtxo) {
+      const nonWitnessUtxoTx = nonWitnessUtxoTxFromCache(
+        cache,
+        input,
+        inputIndex,
+      );
+      const prevoutIndex = unsignedTx.ins[inputIndex].index;
+      res.script = nonWitnessUtxoTx.outs[prevoutIndex].script;
+    } else if (input.witnessUtxo) {
+      res.script = input.witnessUtxo.script;
+    }
+  }
+  if (input.witnessScript || isP2WPKH(res.script!)) {
+    res.isSegwit = true;
+  }
+  return res;
+};
+
+export const witnessStackToScriptWitness = (witness: Buffer[]): Buffer => {
+  let buffer = Buffer.allocUnsafe(0);
+
+  function writeSlice(slice: Buffer): void {
+    buffer = Buffer.concat([buffer, Buffer.from(slice)]);
+  }
+
+  function writeVarInt(i: number): void {
+    const currentLen = buffer.length;
+    const varintLen = varuint.encodingLength(i);
+
+    buffer = Buffer.concat([buffer, Buffer.allocUnsafe(varintLen)]);
+    varuint.encode(i, buffer, currentLen);
+  }
+
+  function writeVarSlice(slice: Buffer): void {
+    writeVarInt(slice.length);
+    writeSlice(slice);
+  }
+
+  function writeVector(vector: Buffer[]): void {
+    writeVarInt(vector.length);
+    vector.forEach(writeVarSlice);
+  }
+
+  writeVector(witness);
+
+  return buffer;
+};
+
+export const redeemFromFinalScriptSig = (
+  finalScript: Buffer | undefined,
+): Buffer | undefined => {
+  if (!finalScript) return;
+  const decomp = bscript.decompile(finalScript);
+  if (!decomp) return;
+  const lastItem = decomp[decomp.length - 1];
+  if (
+    !Buffer.isBuffer(lastItem) ||
+    isPubkeyLike(lastItem) ||
+    isSigLike(lastItem)
+  )
+    return;
+  const sDecomp = bscript.decompile(lastItem);
+  if (!sDecomp) return;
+  return lastItem;
+};
+
+export const redeemFromFinalWitnessScript = (
+  finalScript: Buffer | undefined,
+): Buffer | undefined  => {
+  if (!finalScript) return;
+  const decomp = scriptWitnessToWitnessStack(finalScript);
+  const lastItem = decomp[decomp.length - 1];
+  if (isPubkeyLike(lastItem)) return;
+  const sDecomp = bscript.decompile(lastItem);
+  if (!sDecomp) return;
+  return lastItem;
+}
+
+export const  getFinalScripts =(
+    inputIndex: number,
+    input: PsbtInput,
+    script: Buffer,
+    isSegwit: boolean,
+    isP2SH: boolean,
+    isP2WSH: boolean,
+  ): {
+    finalScriptSig: Buffer | undefined;
+    finalScriptWitness: Buffer | undefined;
+  } => {
+    const scriptType = classifyScript(script);
+    if (!canFinalize(input, script, scriptType))
+      throw new Error(`Can not finalize input #${inputIndex}`);
+    return prepareFinalScripts(
+      script,
+      scriptType,
+      input.partialSig!,
+      isSegwit,
+      isP2SH,
+      isP2WSH,
+    );
+  }
+  
+  function prepareFinalScripts(
+    script: Buffer,
+    scriptType: string,
+    partialSig: PartialSig[],
+    isSegwit: boolean,
+    isP2SH: boolean,
+    isP2WSH: boolean,
+  ): {
+    finalScriptSig: Buffer | undefined;
+    finalScriptWitness: Buffer | undefined;
+  } {
+    let finalScriptSig: Buffer | undefined;
+    let finalScriptWitness: Buffer | undefined;
+  
+    // Wow, the payments API is very handy
+    const payment: payments.Payment = getPayment(script, scriptType, partialSig);
+    const p2wsh = !isP2WSH ? null : payments.p2wsh({ redeem: payment });
+    const p2sh = !isP2SH ? null : payments.p2sh({ redeem: p2wsh || payment });
+  
+    if (isSegwit) {
+      if (p2wsh) {
+        finalScriptWitness = witnessStackToScriptWitness(p2wsh.witness!);
+      } else {
+        finalScriptWitness = witnessStackToScriptWitness(payment.witness!);
+      }
+      if (p2sh) {
+        finalScriptSig = p2sh.input;
+      }
+    } else {
+      if (p2sh) {
+        finalScriptSig = p2sh.input;
+      } else {
+        finalScriptSig = payment.input;
+      }
+    }
+    return {
+      finalScriptSig,
+      finalScriptWitness,
+    };
+  }

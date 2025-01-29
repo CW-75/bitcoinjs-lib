@@ -1,4 +1,4 @@
-import { p2wpkh, p2sh, p2ms, p2pk, p2pkh, p2wsh } from 'src/payments';
+import { p2wpkh, p2sh, p2ms, p2pk, p2pkh, p2wsh } from '../payments';
 
 function isPaymentFactory(payment: any): (script: Buffer) => boolean {
   return (script: Buffer): boolean => {

@@ -1,5 +1,5 @@
 import { Network } from 'src/networks';
-import { Transaction } from 'src/transaction';
+import { Transaction } from '../transaction';
 import { Psbt as PsbtBase } from 'bip174';
 import { PsbtInput, PsbtOutput } from 'bip174/src/lib/interfaces';
 
@@ -60,7 +60,7 @@ export interface PsbtOutputExtendedScript extends PsbtOutput {
   value: number;
 }
 
-interface HDSignerBase {
+export interface HDSignerBase {
   /**
    * DER format compressed publicKey buffer
    */
@@ -83,6 +83,24 @@ export interface HDSigner extends HDSignerBase {
    */
   sign(hash: Buffer): Buffer;
 }
+
+/**
+ * This function must do two things:
+ * 1. Check if the `input` can be finalized. If it can not be finalized, throw.
+ *   ie. `Can not finalize input #${inputIndex}`
+ * 2. Create the finalScriptSig and finalScriptWitness Buffers.
+ */
+export type FinalScriptsFunc = (
+  inputIndex: number, // Which input is it?
+  input: PsbtInput, // The PSBT input contents
+  script: Buffer, // The "meaningful" locking script Buffer (redeemScript for P2SH etc.)
+  isSegwit: boolean, // Is it segwit?
+  isP2SH: boolean, // Is it P2SH?
+  isP2WSH: boolean, // Is it P2WSH?
+) => {
+  finalScriptSig: Buffer | undefined;
+  finalScriptWitness: Buffer | undefined;
+};
 
 /**
  * Same as above but with async sign method

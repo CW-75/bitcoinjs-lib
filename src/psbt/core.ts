@@ -12,7 +12,7 @@ import { cloneBuffer } from 'src/bufferutils';
 
 export class PsbtCore {
   protected __CACHE: PsbtCache;
-  protected opts: PsbtOptsOptional;
+  protected opts: PsbtOptsOptional = {};
   protected data: PsbtBase;
 
   constructor(
@@ -105,7 +105,7 @@ export class PsbtCore {
     return this.__CACHE.__TX.outs.map(output => {
       let address;
       try {
-        address = fromOutputScript(output.script, this.opts?.network);
+        address = fromOutputScript(output.script, this.opts.network);
       } catch (_) {}
       return {
         script: cloneBuffer(output.script),
@@ -125,6 +125,7 @@ export class PsbtCore {
   }
 
   getFeeRate(): number {
+    getTxCacheValue
     return getTxCacheValue(
       '__FEE_RATE',
       'fee rate',

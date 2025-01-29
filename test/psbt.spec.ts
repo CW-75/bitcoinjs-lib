@@ -1,17 +1,17 @@
 import * as assert from 'assert';
 import * as crypto from 'crypto';
-import { describe, it } from 'mocha';
+import { describe, it } from 'vitest';
 
 import {
   bip32,
   ECPair,
   networks as NETWORKS,
   payments,
-  Psbt,
   Signer,
   SignerAsync,
 } from '..';
 
+import { Psbt } from '../src/psbt';
 import * as preFixtures from './fixtures/psbt.json';
 
 const initBuffers = (object: any): typeof preFixtures =>
