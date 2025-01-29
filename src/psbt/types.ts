@@ -1,7 +1,9 @@
 import { Network } from 'src/networks';
 import { Transaction } from 'src/transaction';
 import { Psbt as PsbtBase } from 'bip174';
-import { PsbtOutput } from 'bip174/src/lib/interfaces';
+import { PsbtInput, PsbtOutput } from 'bip174/src/lib/interfaces';
+
+export type PsbtOptsOptional = PsbtOpts;
 
 export interface PsbtParams {
   opts?: PsbtOptsOptional;
@@ -43,7 +45,10 @@ export interface PsbtTxOutput extends TransactionOutput {
   address: string | undefined;
 }
 
-export type PsbtOutputExtended = PsbtOutputExtendedAddress | PsbtOutputExtendedScript;
+export interface PsbtInputExtended extends PsbtInput, TransactionInput {}
+export type PsbtOutputExtended =
+  | PsbtOutputExtendedAddress
+  | PsbtOutputExtendedScript;
 
 export interface PsbtOutputExtendedAddress extends PsbtOutput {
   address: string;
@@ -51,8 +56,75 @@ export interface PsbtOutputExtendedAddress extends PsbtOutput {
 }
 
 export interface PsbtOutputExtendedScript extends PsbtOutput {
-    script: Buffer;
-    value: number;
-  }
+  script: Buffer;
+  value: number;
+}
 
-export type PsbtOptsOptional = Partial<PsbtOpts>;
+interface HDSignerBase {
+  /**
+   * DER format compressed publicKey buffer
+   */
+  publicKey: Buffer;
+  /**
+   * The first 4 bytes of the sha256-ripemd160 of the publicKey
+   */
+  fingerprint: Buffer;
+}
+
+export interface HDSigner extends HDSignerBase {
+  /**
+   * The path string must match /^m(\/\d+'?)+$/
+   * ex. m/44'/0'/0'/1/23 levels with ' must be hard derivations
+   */
+  derivePath(path: string): HDSigner;
+  /**
+   * Input hash (the "message digest") for the signature algorithm
+   * Return a 64 byte signature (32 byte r and 32 byte s in that order)
+   */
+  sign(hash: Buffer): Buffer;
+}
+
+/**
+ * Same as above but with async sign method
+ */
+export interface HDSignerAsync extends HDSignerBase {
+  derivePath(path: string): HDSignerAsync;
+  sign(hash: Buffer): Promise<Buffer>;
+}
+
+export type AllScriptType =
+  | 'witnesspubkeyhash'
+  | 'pubkeyhash'
+  | 'multisig'
+  | 'pubkey'
+  | 'nonstandard'
+  | 'p2sh-witnesspubkeyhash'
+  | 'p2sh-pubkeyhash'
+  | 'p2sh-multisig'
+  | 'p2sh-pubkey'
+  | 'p2sh-nonstandard'
+  | 'p2wsh-pubkeyhash'
+  | 'p2wsh-multisig'
+  | 'p2wsh-pubkey'
+  | 'p2wsh-nonstandard'
+  | 'p2sh-p2wsh-pubkeyhash'
+  | 'p2sh-p2wsh-multisig'
+  | 'p2sh-p2wsh-pubkey'
+  | 'p2sh-p2wsh-nonstandard';
+
+export type ScriptType =
+  | 'witnesspubkeyhash'
+  | 'pubkeyhash'
+  | 'multisig'
+  | 'pubkey'
+  | 'nonstandard';
+
+
+export interface GetScriptReturn {
+  script: Buffer | null;
+  isSegwit: boolean;
+  isP2SH: boolean;
+  isP2WSH: boolean;
+}
+
+export type TxCacheNumberKey = '__FEE_RATE' | '__FEE';

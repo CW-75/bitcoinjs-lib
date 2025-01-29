@@ -1,16 +1,25 @@
-import { PsbtInputExtended } from 'bip174/src/lib/interfaces';
 import { PsbtCore } from './core';
 import { checkInputsForPartialSig } from './signatures';
 import { checkInvalidP2WSH } from './protocol';
 import { addNonWitnessTxCache, checkTxInputCache } from './cache';
 import { check32Bit } from './bit';
 import { toOutputScript } from 'src/address';
-import { PsbtOutputExtended } from './types';
+import { PsbtInputExtended, PsbtOutputExtended } from './types';
 
 /**
  * Group of methods to add inputs to a Psbt object.
  */
 export class PsbtActions extends PsbtCore {
+  /**
+   * Add multiple utxo inputs to the transaction.
+   * @param inputDatas array of utxo inputs
+   * @returns
+   */
+  addInputs(inputDatas: PsbtInputExtended[]): this {
+    inputDatas.forEach(inputData => this.addInput(inputData));
+    return this;
+  }
+
   /**
    * Add an utxo input to the transaction.
    * @param inputData
@@ -45,11 +54,6 @@ export class PsbtActions extends PsbtCore {
     return this;
   }
 
-  addInputs(inputDatas: PsbtInputExtended[]): this {
-    inputDatas.forEach(inputData => this.addInput(inputData));
-    return this;
-  }
-
   setInputSequence(inputIndex: number, sequence: number): this {
     check32Bit(sequence);
     checkInputsForPartialSig(this.data.inputs, 'setInputSequence');
@@ -62,11 +66,21 @@ export class PsbtActions extends PsbtCore {
     return this;
   }
 
+  /**
+   * Adds multiple outputs to the transaction.
+   * @param outputDatas 
+   * @returns 
+   */
   addOutputs(outputDatas: PsbtOutputExtended[]): this {
     outputDatas.forEach(outputData => this.addOutput(outputData));
     return this;
   }
 
+  /**
+   * add an output to the transaction.
+   * @param outputData 
+   * @returns 
+   */
   addOutput(outputData: PsbtOutputExtended): this {
     if (
       arguments.length > 1 ||
@@ -94,5 +108,5 @@ export class PsbtActions extends PsbtCore {
     c.__EXTRACTED_TX = undefined;
     return this;
   }
-}
 
+}

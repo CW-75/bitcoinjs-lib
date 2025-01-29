@@ -1,9 +1,8 @@
 import { PsbtCache, PsbtOptsOptional, PsbtParams, PsbtTxOutput } from './types';
 import { Psbt as PsbtBase } from 'bip174';
 import {
-  checkTxForDupeIns,
+  getTxCacheValue,
   PsbtTransaction,
-  transactionFromBuffer,
 } from './transaction';
 import { DEFAULT_OPTS } from './const';
 import { check32Bit } from './bit';
@@ -13,7 +12,7 @@ import { cloneBuffer } from 'src/bufferutils';
 
 export class PsbtCore {
   protected __CACHE: PsbtCache;
-  protected opts: PsbtOptsOptional = {};
+  protected opts: PsbtOptsOptional;
   protected data: PsbtBase;
 
   constructor(
@@ -106,7 +105,7 @@ export class PsbtCore {
     return this.__CACHE.__TX.outs.map(output => {
       let address;
       try {
-        address = fromOutputScript(output.script, this.opts.network);
+        address = fromOutputScript(output.script, this.opts?.network);
       } catch (_) {}
       return {
         script: cloneBuffer(output.script),
@@ -114,5 +113,27 @@ export class PsbtCore {
         address,
       };
     });
+  }
+
+  /**
+   * Set Maximun fee rate on the transaction 
+   * @param satoshiPerByte 
+   */
+  setMaximumFeeRate(satoshiPerByte: number): void {
+    check32Bit(satoshiPerByte); // 42.9 BTC per byte IS excessive... so throw
+    this.opts.maximumFeeRate = satoshiPerByte;
+  }
+
+  getFeeRate(): number {
+    return getTxCacheValue(
+      '__FEE_RATE',
+      'fee rate',
+      this.data.inputs,
+      this.__CACHE,
+    )!;
+  }
+
+  getFee(): number {
+    return getTxCacheValue('__FEE', 'fee', this.data.inputs, this.__CACHE)!;
   }
 }

@@ -3,6 +3,10 @@ import { PsbtActions } from './actions';
 import { checkTxForDupeIns, transactionFromBuffer } from './transaction';
 import { PsbtOptsOptional } from './types';
 import { Psbt as PsbtBase } from 'bip66';
+import { checkFees } from './fees';
+import { isFinalized } from './script';
+import { inputFinalizeGetAmts } from './input';
+import { Transaction } from 'src/transaction';
 
 interface IPsbtCoreUpdates {
   setLocktime(locktime: number): Psbt;
@@ -36,7 +40,7 @@ class Psbt extends PsbtActions implements IPsbtActions, IPsbtCoreUpdates {
     return this.fromBuffer(buffer, opts);
   }
 
-  static fromBuffer(buffer: Buffer, opts: PsbtOptsOptional = {}): Psbt {
+  static fromBuffer(buffer: Buffer, opts?: PsbtOptsOptional): Psbt {
     const psbtBase = PsbtBase.fromBuffer(buffer, transactionFromBuffer);
     const psbt = new Psbt({ opts, data: psbtBase });
     checkTxForDupeIns(psbt.__CACHE.__TX, psbt.__CACHE);
@@ -53,6 +57,18 @@ class Psbt extends PsbtActions implements IPsbtActions, IPsbtCoreUpdates {
     const res = Psbt.fromBuffer(this.data.toBuffer());
     res.opts = JSON.parse(JSON.stringify(this.opts));
     return res;
+  }
+
+  extractTransaction(disableFeeCheck?: boolean): Transaction {
+    if (!this.data.inputs.every(isFinalized)) throw new Error('Not finalized');
+    const c = this.__CACHE;
+    if (!disableFeeCheck) {
+      checkFees(this, c, this.opts);
+    }
+    if (c.__EXTRACTED_TX) return c.__EXTRACTED_TX;
+    const tx = c.__TX.clone();
+    inputFinalizeGetAmts(this.data.inputs, tx, c, true);
+    return tx;
   }
 }
 

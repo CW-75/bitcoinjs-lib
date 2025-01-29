@@ -1,18 +1,21 @@
 import {
   Transaction as ITransaction,
+  PsbtInput,
   TransactionFromBuffer,
 } from 'bip174/src/lib/interfaces';
 import { reverseBuffer } from 'src/bufferutils';
 import { Transaction } from 'src/transaction';
-import { PsbtCache } from './types';
+import { PsbtCache, TxCacheNumberKey } from './types';
 import { checkTxInputCache } from './cache';
+import { isFinalized } from './script';
+import { inputFinalizeGetAmts } from './input';
 
 /**
  * Check an empty bip174 transaction.
  * @param tx
  * @throws {Error} If the transaction is not empty.
  */
-const checkTxEmpty = (tx: Transaction) => {
+export const checkTxEmpty = (tx: Transaction) => {
   const isEmpty = tx.ins.every(
     input =>
       input.script &&
@@ -92,4 +95,72 @@ export class PsbtTransaction implements ITransaction {
   toBuffer(): Buffer {
     return this.tx.toBuffer();
   }
+}
+
+export const nonWitnessUtxoTxFromCache = (
+  cache: PsbtCache,
+  input: PsbtInput,
+  inputIndex: number,
+): Transaction => {
+  const c = cache.__NON_WITNESS_UTXO_TX_CACHE;
+  if (!c[inputIndex]) {
+    addNonWitnessTxCache(cache, input, inputIndex);
+  }
+  return c[inputIndex];
+}
+
+export const getTxCacheValue = (
+  key: TxCacheNumberKey,
+  name: string,
+  inputs: PsbtInput[],
+  c: PsbtCache,
+): number | undefined =>{
+  if (!inputs.every(isFinalized))
+    throw new Error(`PSBT must be finalized to calculate ${name}`);
+  if (key === '__FEE_RATE' && c.__FEE_RATE) return c.__FEE_RATE;
+  if (key === '__FEE' && c.__FEE) return c.__FEE;
+  let tx: Transaction;
+  let mustFinalize = true;
+  if (c.__EXTRACTED_TX) {
+    tx = c.__EXTRACTED_TX;
+    mustFinalize = false;
+  } else {
+    tx = c.__TX.clone();
+  }
+  inputFinalizeGetAmts(inputs, tx, c, mustFinalize);
+  if (key === '__FEE_RATE') return c.__FEE_RATE!;
+  else if (key === '__FEE') return c.__FEE!;
+}
+
+
+export const addNonWitnessTxCache = (
+  cache: PsbtCache,
+  input: PsbtInput,
+  inputIndex: number,
+): void => {
+  cache.__NON_WITNESS_UTXO_BUF_CACHE[inputIndex] = input.nonWitnessUtxo!;
+
+  const tx = Transaction.fromBuffer(input.nonWitnessUtxo!);
+  cache.__NON_WITNESS_UTXO_TX_CACHE[inputIndex] = tx;
+
+  const self = cache;
+  const selfIndex = inputIndex;
+  delete input.nonWitnessUtxo;
+  Object.defineProperty(input, 'nonWitnessUtxo', {
+    enumerable: true,
+    get(): Buffer {
+      const buf = self.__NON_WITNESS_UTXO_BUF_CACHE[selfIndex];
+      const txCache = self.__NON_WITNESS_UTXO_TX_CACHE[selfIndex];
+      if (buf !== undefined) {
+        return buf;
+      } else {
+        const newBuf = txCache.toBuffer();
+        self.__NON_WITNESS_UTXO_BUF_CACHE[selfIndex] = newBuf;
+        return newBuf;
+      }
+    },
+    set(data: Buffer): void {
+      self.__NON_WITNESS_UTXO_BUF_CACHE[selfIndex] = data;
+    },
+  });
 }

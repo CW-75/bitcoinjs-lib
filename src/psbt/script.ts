@@ -1,0 +1,183 @@
+import { PsbtInput } from 'bip174/src/lib/interfaces';
+import { hasSigs } from './signatures';
+import { payments } from 'src';
+import {
+  checkInvalidP2WSH,
+  isP2MS,
+  isP2PK,
+  isP2PKH,
+  isP2SHScript,
+  isP2WPKH,
+  isP2WSHScript,
+} from './protocol';
+import { PsbtCache, ScriptType } from './types';
+import { nonWitnessUtxoTxFromCache } from './transaction';
+import { pubkeyInScript } from './pubkey';
+import * as varuint from 'bip174/src/lib/converter/varint';
+
+export const canFinalize = (
+  input: PsbtInput,
+  script: Buffer,
+  scriptType: string,
+): boolean => {
+  switch (scriptType) {
+    case 'pubkey':
+    case 'pubkeyhash':
+    case 'witnesspubkeyhash':
+      return hasSigs(1, input.partialSig);
+    case 'multisig':
+      const p2ms = payments.p2ms({ output: script });
+      return hasSigs(p2ms.m!, input.partialSig, p2ms.pubkeys);
+    default:
+      return false;
+  }
+};
+
+export const isFinalized = (input: PsbtInput): boolean => {
+  return !!input.finalScriptSig || !!input.finalScriptWitness;
+};
+
+export const checkScriptForPubkey = (
+  pubkey: Buffer,
+  script: Buffer,
+  action: string,
+): void => {
+  if (!pubkeyInScript(pubkey, script)) {
+    throw new Error(
+      `Can not ${action} for this input with the key ${pubkey.toString('hex')}`,
+    );
+  }
+};
+
+export const getMeaningfulScript = (
+  script: Buffer,
+  index: number,
+  ioType: 'input' | 'output',
+  redeemScript?: Buffer,
+  witnessScript?: Buffer,
+): {
+  meaningfulScript: Buffer;
+  type: 'p2sh' | 'p2wsh' | 'p2sh-p2wsh' | 'raw';
+} => {
+  const isP2SH = isP2SHScript(script);
+  const isP2SHP2WSH = isP2SH && redeemScript && isP2WSHScript(redeemScript);
+  const isP2WSH = isP2WSHScript(script);
+
+  if (isP2SH && redeemScript === undefined)
+    throw new Error('scriptPubkey is P2SH but redeemScript missing');
+  if ((isP2WSH || isP2SHP2WSH) && witnessScript === undefined)
+    throw new Error(
+      'scriptPubkey or redeemScript is P2WSH but witnessScript missing',
+    );
+
+  let meaningfulScript: Buffer;
+
+  if (isP2SHP2WSH) {
+    meaningfulScript = witnessScript!;
+    checkRedeemScript(index, script, redeemScript!, ioType);
+    checkWitnessScript(index, redeemScript!, witnessScript!, ioType);
+    checkInvalidP2WSH(meaningfulScript);
+  } else if (isP2WSH) {
+    meaningfulScript = witnessScript!;
+    checkWitnessScript(index, script, witnessScript!, ioType);
+    checkInvalidP2WSH(meaningfulScript);
+  } else if (isP2SH) {
+    meaningfulScript = redeemScript!;
+    checkRedeemScript(index, script, redeemScript!, ioType);
+  } else {
+    meaningfulScript = script;
+  }
+  return {
+    meaningfulScript,
+    type: isP2SHP2WSH
+      ? 'p2sh-p2wsh'
+      : isP2SH
+      ? 'p2sh'
+      : isP2WSH
+      ? 'p2wsh'
+      : 'raw',
+  };
+};
+
+export const scriptWitnessToWitnessStack = (buffer: Buffer): Buffer[] => {
+  let offset = 0;
+
+  function readSlice(n: number): Buffer {
+    offset += n;
+    return buffer.slice(offset - n, offset);
+  }
+
+  function readVarInt(): number {
+    const vi = varuint.decode(buffer, offset);
+    offset += (varuint.decode as any).bytes;
+    return vi;
+  }
+
+  function readVarSlice(): Buffer {
+    return readSlice(readVarInt());
+  }
+
+  function readVector(): Buffer[] {
+    const count = readVarInt();
+    const vector: Buffer[] = [];
+    for (let i = 0; i < count; i++) vector.push(readVarSlice());
+    return vector;
+  }
+
+  return readVector();
+};
+
+function scriptCheckerFactory(
+  payment: any,
+  paymentScriptName: string,
+): (idx: number, spk: Buffer, rs: Buffer, ioType: 'input' | 'output') => void {
+  return (
+    inputIndex: number,
+    scriptPubKey: Buffer,
+    redeemScript: Buffer,
+    ioType: 'input' | 'output',
+  ): void => {
+    const redeemScriptOutput = payment({
+      redeem: { output: redeemScript },
+    }).output as Buffer;
+
+    if (!scriptPubKey.equals(redeemScriptOutput)) {
+      throw new Error(
+        `${paymentScriptName} for ${ioType} #${inputIndex} doesn't match the scriptPubKey in the prevout`,
+      );
+    }
+  };
+}
+
+export const classifyScript = (script: Buffer): ScriptType => {
+  if (isP2WPKH(script)) return 'witnesspubkeyhash';
+  if (isP2PKH(script)) return 'pubkeyhash';
+  if (isP2MS(script)) return 'multisig';
+  if (isP2PK(script)) return 'pubkey';
+  return 'nonstandard';
+};
+
+const checkRedeemScript = scriptCheckerFactory(payments.p2sh, 'Redeem script');
+const checkWitnessScript = scriptCheckerFactory(
+  payments.p2wsh,
+  'Witness script',
+);
+
+export const getScriptFromUtxo = (
+  inputIndex: number,
+  input: PsbtInput,
+  cache: PsbtCache,
+): Buffer => {
+  if (input.witnessUtxo !== undefined) {
+    return input.witnessUtxo.script;
+  } else if (input.nonWitnessUtxo !== undefined) {
+    const nonWitnessUtxoTx = nonWitnessUtxoTxFromCache(
+      cache,
+      input,
+      inputIndex,
+    );
+    return nonWitnessUtxoTx.outs[cache.__TX.ins[inputIndex].index].script;
+  } else {
+    throw new Error("Can't find pubkey in input without Utxo data");
+  }
+};
