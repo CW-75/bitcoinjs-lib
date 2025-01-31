@@ -62,6 +62,7 @@ export class Transaction {
   static readonly SIGHASH_ALL = 0x01;
   static readonly SIGHASH_NONE = 0x02;
   static readonly SIGHASH_SINGLE = 0x03;
+  static readonly SIGHASH_FORK_ID = 0x40;
   static readonly SIGHASH_ANYONECANPAY = 0x80;
   static readonly ADVANCED_TRANSACTION_MARKER = 0x00;
   static readonly ADVANCED_TRANSACTION_FLAG = 0x01;
@@ -252,6 +253,7 @@ export class Transaction {
     return newTx;
   }
 
+  
   /**
    * Hash transaction for signing a specific input.
    *

@@ -28,13 +28,13 @@
     "noUnusedParameters": true,
     "baseUrl": ".",
     "paths": {
-      "../src/*": ["../ts_src/*"]
+      "../src/*": ["../src/*"]
     }
   },
   "include": [
       "./**/*.ts"
   ],
   "exclude": [
-      "../ts_src/**/*.ts"
+      "../src/**/*.ts"
   ]
 }

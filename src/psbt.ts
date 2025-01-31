@@ -14,6 +14,7 @@ import {
   TransactionInput,
   TransactionOutput,
 } from 'bip174/src/lib/interfaces';
+
 import { checkForInput, checkForOutput } from 'bip174/src/lib/utils';
 import { fromOutputScript, toOutputScript } from './address';
 import { cloneBuffer, reverseBuffer } from './bufferutils';
@@ -1301,6 +1302,14 @@ function getHashForSig(
           'BIP174 compliant.\n*********************\nPROCEED WITH CAUTION!\n' +
           '*********************',
       );
+    if (sighashType | Transaction.SIGHASH_FORK_ID) {
+      hash = unsignedTx.hashForWitnessV0(
+        inputIndex,
+        meaningfulScript,
+        prevout.value,
+        sighashType,
+      );
+    }
     hash = unsignedTx.hashForSignature(
       inputIndex,
       meaningfulScript,
